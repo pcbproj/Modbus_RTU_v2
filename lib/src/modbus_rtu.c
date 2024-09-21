@@ -455,8 +455,6 @@ uint8_t Exec_WRITE_MULTI_COILS(uint8_t rx_request[],
 	/////!!   bytes_num = 1 allways
 	// TODO: CoilsPortValue wrong formula!!
 
-	//uint8_t CoilsPortValue = ( ( ( rx_request[7] << 8 ) + rx_request[8] ) & 0x0007) ^ 0x0007; // (XOR ^) inversion couse LEDs turned by zero.
-	
 	uint8_t CoilsPortValue = ( ( rx_request[7]) ^ 0x0007) << (start_addr_in - 1); // (XOR ^) inversion couse LEDs turned by zero.
 
 	uint16_t turn_on_coils_num = 0;
