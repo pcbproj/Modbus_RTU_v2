@@ -1,0 +1,290 @@
+#ifndef MODBUS_H
+#define MODBUS_H
+
+#include "stm32f407xx.h"
+#include "usart.h"
+#include "adc.h"
+#include "gpio.h"
+#include "crc16.h"
+#include "delay.h"
+#include "timer.h"
+
+#define MODBUS_USART		6
+
+
+//----------- Modbus timer constants -----------------
+#define USART_BAUD_USED		115200
+#define USART_BIT_TIME_US	1000000 / USART_BAUD_USED
+#define USART_BYTE_TIME_US	USART_BIT_TIME_US * 12	// BYTE send in 12 bits maximum
+
+#define DELAY_1_5_BYTE_US	( USART_BYTE_TIME_US * 1.5 + 1 )
+#define DELAY_2_5_BYTE_US	( USART_BYTE_TIME_US * 2.5 + 1 )
+#define DELAY_3_5_BYTE_US	( USART_BYTE_TIME_US * 3.5 + 1 )
+#define DELAY_4_5_BYTE_US	( USART_BYTE_TIME_US * 4.5 + 1 )
+
+//-------- internal modbus timers state codes -------------
+#define MB_TIM_IDLE				0x00
+#define MB_TIM_DONE				0x01
+#define MB_TIM_STARTED			0x02
+
+
+//-------- internal modbus reception state codes -------------
+#define MB_RX_IDLE				0x00
+#define MB_RX_DONE				0x01
+#define MB_RX_STARTED			0x02
+
+
+//---- Modbus command codes ------------
+#define READ_COILS				0x01
+#define READ_DISCRETE_INPUTS	0x02
+#define READ_INPUT_REGISTERS	0x04
+#define WRITE_SINGLE_COIL		0x05	
+#define WRITE_MULTI_COILS		0x0F
+
+
+#define ERR_ANSWER_ADD			0x80	// add for answer command code
+
+
+//-------- Modbus ERROR codes ----------
+#define ERROR_OP_CODE			0x01
+#define ERROR_DATA_ADDR			0x02
+#define ERROR_DATA_VAL			0x03
+#define ERROR_EXECUTION			0x04	
+#define ERROR_05				0x05	// reserved
+#define ERROR_06				0x06	// reserved
+
+//-------- Internal ERROR Codes --------------
+#define MODBUS_OK				0x00
+#define ERROR_CRC				0x0F	// ошибка по CRC16 
+#define ERROR_PACK_LEN			0x1F	// неверная длина пакета
+#define MODBUS_RX_DONE			0x2F	// прием пакета завершен
+#define ERROR_DEV_ADDR			0x3F	// неверный адрес устройства в пакете
+
+//------- Modbus device address----------
+#define DEVICE_ADDR				0xAD
+
+//------Modbus internal addresses--------
+// LEDS, BTNS, ADC_data
+#define COILS_NUM				3	// LEDS
+#define DISCRETE_INPUTS_NUM		3	// BTNS
+#define INPUT_REGS_NUM			1	// ADC data
+
+
+#define COIL_ON_CODE			0xFF00
+#define COIL_OFF_CODE			0x0000
+
+
+
+/*******
+Функция реализации таймеров для определения временных задержек протокола Modbus RTU
+вызывается только в прерывании Systick timer с частотой 1 МГц
+*******/
+//void modbus_timers(void);
+
+/******
+Функция запуска таймера Modbus.
+*******/
+void ModbusTimerStart(uint16_t timer_cycles);
+
+/******
+Функция сброса таймера Modbus.
+*******/
+void ModbusTimerStopClear(void);
+
+
+/*****
+Ф-ия вызывается из прерываний TIM2_Handler. 
+Отслеживает состояние таймеров timer45 И timer25 
+*****/
+void ModbusTimersIRQ(void);
+
+
+
+/*****
+Ф-ия приема байтов по протоколу Modbus и складывает их в глобальный массив ModbusRxArray[].
+вызывается в прерываний от USART6
+*****/
+void ModbusReception(void);
+
+
+/******
+Функция ожидания тишины на шине Modbus в течение микросекунд.
+опрашивается таймер TIM2 и USART6.
+возвращает 0, если на линии тишена, т.е. TIM2 отработал раньше прихода байта по USART6
+возвращает 1, если на линии есть передача.
+запускается таймер на us микросекунд и если приходит байт по USART6, до окончания таймера, то таймер сбрасывается
+и счет начинается по новой.
+******/
+uint8_t ModbusIdle_wait(void);
+
+
+
+
+
+
+// TODO: переписать функцию.
+// чтобы пауза в 3,5 байта выдерживалась и только после этого проверялся приемник USART
+// а если во время паузы 3,5 байта приходит байт на USART, то перезапускать таймер 3,5 байта
+// лучше начинать прием пакета по прерыванию от USART, чтобы не звисать в ожидании начала пакета.
+uint8_t ModbusReceiveFirstByte(uint8_t *rx_byte);
+
+
+/*******
+Функция принимает байты запроса с определеием максимального времени паузы между байтами = 1,5 байта.
+Если пауза между байтами больше чем 1,5 байта, то пакет считается принятым.
+Функция возвращает код ошибки: 
+	MODBUS_OK - если байт принят с правильной паузой. 
+	MODBUS_RX_DONE - предыдущий принятый байт был последним байтом пакета.
+*******/
+uint8_t ModbusReceiveByte(uint8_t *rx_byte);
+
+
+/*********
+Ф-ия принимает пакет согласно протоколу Modbus RTU.
+Измеряются и выдержтваются временные интервалы 1,5 байта м/у байтами
+
+Ф-ия возвращает: 
+	код ошибки ERROR_PACK_LEN если пакет больше максимальной длины
+	MODBUS_OK если длина пакета на максимальная.
+Принятый пакет сохраняет в массив rx_array[] с указанием общей длины принятого пакета в rx_array_len
+Последние 2 байта в принятом массиве это CRC16. 
+*********/
+uint8_t RequestReceive(uint8_t rx_array[], uint8_t *rx_array_len);
+
+
+
+/******
+Ф-ия разбирает массив принятого пакета и выполняет требуемые операции.
+В зависимости от кода операции по разному обрабатываются поле DATA
+возвращает коды ошибок Modbus Error codes если были ошибки,
+или MODBUS_OK, если операция выполнена успешно.
+входные параметры - массив с запросом rx_request[] и длина этого массива request_len.
+функция формирует массив для ответного пакета - tx_answer[] и длина его - answer_len . 
+CRC16 также вычисляется для выходного пакета.
+******/
+uint8_t RequestParsingOperationExec(uint8_t rx_request[],		// received request array
+						uint8_t request_len,		// request array length in bytes
+						uint8_t tx_answer[],		// tx_answer array
+						uint8_t *answer_len			// answer array length in bytes
+						);
+
+
+
+
+
+/*******
+ф-ия возвращает код ошибки если полученный код операции не поддерживается
+или возвращает MODBUS_OK если полученный код операции поддерживается 
+в выходной параметр op_code_out сохраняется значение кода операции
+*******/
+uint8_t GetOperationCode(uint8_t rx_request[], uint8_t *op_code_out);
+	
+	
+	
+
+
+/********
+Ф-ия возвращает код ошибки, если адрес данных больше чем адресуемых объектов в устройстве
+или возвращает MODBUS_OK, если адресация данных верная.
+*******/
+uint8_t CheckDataAddress(uint8_t op_code, uint8_t rx_request[]);		
+
+
+
+
+/********
+Ф-ия возвращает код ошибки, если значение данных больше чем допустимый диапазон в устройстве
+или возвращает MODBUS_OK, если значения данных верные.
+*******/
+uint8_t CheckDataValue(uint8_t op_code_in, uint8_t rx_request[]);
+
+
+/*******
+Ф-ия проверяет правильность поля DATA и выполняет команду по запросу.
+	op_code			- код операции в принятом запросе
+	rx_request[]	- массив запроса
+	req_len,		- длина массива запроса
+	tx_answer[]		- выходной массив ответа. CRC16 посчитано и добавлено в конец массива 
+					(младший байт CRC идет первый, потом - старший)
+	*answer_len		- длина выходного массива ответа
+
+
+*******/
+uint8_t ExecOperation(uint8_t op_code, 
+						uint8_t rx_request[], 
+						uint8_t req_len, 
+						uint8_t tx_answer[], 
+						uint8_t *answer_len);
+						
+									
+
+/********
+Ф-ия выполняет операцию READ_COILS и возвращает код ошибки выполнения, либо MODBUS_OK, если все хорошо.
+ответный пакет формируется в выходной параметр массив answer_tx[], НО БЕЗ CRC16! 
+********/
+uint8_t Exec_READ_COILS( uint16_t start_addr_in, 
+							uint16_t quantity_in, 
+							uint8_t answer_tx[],
+							uint8_t *answer_len);
+
+
+/********
+Ф-ия выполняет операцию READ_DISCRETE_INPUTS и возвращает код ошибки выполнения, 
+либо возвращает MODBUS_OK, если все хорошо.
+ответный пакет формируется в выходной параметр массив answer_tx[], БЕЗ CRC16! 
+********/
+uint8_t Exec_READ_DISCRETE_INPUTS( uint16_t start_addr_in, 
+							uint16_t quantity_in, 
+							uint8_t answer_tx[],
+							uint8_t *answer_len);
+
+
+
+/********
+Ф-ия выполняет операцию READ_INPUT_REGISTERS и возвращает код ошибки выполнения, 
+либо возвращает MODBUS_OK, если все хорошо.
+ответный пакет формируется в выходной параметр массив answer_tx[], БЕЗ CRC16! 
+********/
+uint8_t Exec_READ_INPUT_REGISTERS( uint16_t start_addr_in, 
+							uint16_t quantity_in, 
+							uint8_t answer_tx[],
+							uint8_t *answer_len);
+
+
+
+
+/********
+Ф-ия выполняет операцию WRITE_SINGLE_COIL и возвращает код ошибки выполнения, 
+либо возвращает MODBUS_OK, если все хорошо.
+ответный пакет формируется в выходной параметр массив answer_tx[], БЕЗ CRC16! 
+********/
+uint8_t Exec_WRITE_SINGLE_COIL( uint16_t start_addr_in, 
+							uint16_t value_in, 
+							uint8_t answer_tx[],
+							uint8_t *answer_len);
+
+
+
+
+/********
+Ф-ия выполняет операцию WRITE_MULTI_COILS и возвращает код ошибки выполнения, 
+либо возвращает MODBUS_OK, если все хорошо.
+ответный пакет формируется в выходной параметр массив answer_tx[], БЕЗ CRC16! 
+********/
+uint8_t Exec_WRITE_MULTI_COILS(uint8_t rx_request[],
+							uint8_t req_len, 
+							uint8_t answer_tx[],
+							uint8_t *answer_len);
+										
+
+/********
+Ф-ия отправки ответного сообщения. 
+либо отправка сообщения об ошибке
+********/
+uint8_t AnswerTransmit(uint8_t err_code, uint8_t tx_array[], uint8_t *tx_array_len, uint8_t op_code);
+
+
+
+
+
+#endif
