@@ -1,53 +1,21 @@
 #include "modbus_rtu.h"
 
-uint8_t timer25_state = MB_TIM_IDLE;	// bit[1] = timer started flag, bit[0] = timer done flag
+uint8_t timer25_state = MB_TIM_IDLE;
 uint8_t timer45_state = MB_TIM_IDLE;
 uint8_t ModbusRxState = MB_RX_IDLE;
 
 uint8_t ModbusRxArray[256];		// global array for modbus request reception in USART interrupt
 uint8_t RxByteNum;
 
-uint8_t RxArraySafe[256];
+uint8_t RxArraySafe[256];		// global safe array for modbus request reception
 uint8_t RxByteNumSafe;
 
-
-//uint8_t timer15_done_flag = 0;	
-//uint8_t timer35_done_flag = 0;
-
-
-//uint16_t timer15 = 0;
-//uint16_t timer35 = 0;
-
-//uint16_t Enable15 = 0;
-//uint16_t Enable35 = 0;
-
-
-
-//void modbus_timers(void){
-//	if(Enable15){ 
-//		if(timer15 < DELAY_1_5_BYTE_US) {
-//			timer15_done_flag = 0;
-//			timer15++;
-//		}
-//		else timer15_done_flag = 1;
-//	}
-//	else{
-//		if(Enable35){
-//			if(timer35 < DELAY_3_5_BYTE_US){
-//				timer35_done_flag = 0;
-//				timer35++;
-//			}
-//			else timer35_done_flag = 1;
-//		}
-//	}
-//}
 
 
 
 void ModbusTimersIRQ(void){
 	if(timer45_state == MB_TIM_STARTED){			// wait for 3.5 byte silent on the modbus bud
 		timer45_state = MB_TIM_DONE;
-		//ModbusRxState = MB_RX_IDLE;
 		timer25_state = MB_TIM_IDLE;
 		RxByteNum = 0;		// clear reception byte number
 	}
@@ -129,87 +97,6 @@ void ModbusTimerStart(uint16_t timer_cycles){
 }
 
 
-void ModbusTimerStopClear(void){
-	TIM2_StopClear();
-}
-
-
-void ModbusTimerClear(void){
-	TIM2_Clear();
-}
-
-// TODO: переписать функцию.
-// чтобы пауза в 3,5 байта выдерживалась и только после этого проверялся приемник USART
-// а если во время паузы 3,5 байта приходит байт на USART, то перезапускать таймер 3,5 байта
-// лучше начинать прием пакета по прерыванию от USART, чтобы не звисать в ожидании начала пакета.
-uint8_t ModbusReceiveFirstByte(uint8_t *rx_byte){
-	
-	ModbusTimerStart(DELAY_4_5_BYTE_US);
-
-	// пока не TIM2_CHECK() и если приходит байт, то таймер должен перезапускаться, 
-	// чтобы пауза была не менее 3,5 байта длительностью.
-	while(!TIM2_Done()){
-		
-		if( USART6->SR & USART_SR_RXNE ){
-			*rx_byte = USART6 -> DR;
-			ModbusTimerStart(DELAY_2_5_BYTE_US);	// start timer (1.5 + 1) byte  
-			return MODBUS_OK;
-		}
-		
-	}	// wait for 3.5 byte time pause
-	
-	return ERROR_PACK_LEN;
-	
-}
-
-
-uint8_t ModbusReceiveByte(uint8_t *rx_byte){
-	while(!TIM2_Done()){
-		if( USART6->SR & USART_SR_RXNE ){	// TODO: тут не заходит в IF при получении последующего байта.
-			*rx_byte = USART6 -> DR;
-			ModbusTimerStart(DELAY_2_5_BYTE_US);	// start timer (1.5 + 1) byte
-			return MODBUS_OK;
-		}
-	}
-	return MODBUS_RX_DONE;	 // if timer(1.5 + 1) byte done before byte was received
-}
-
-
-
-
-
-uint8_t RequestReceive(uint8_t rx_array[], uint8_t *rx_array_len){
-	uint8_t rx_byte;
-	uint8_t rx_byte_num = 0;
-	uint8_t rx_err = 0;
-	
-	// waiting for first byte
-	//rx_byte_num = 0;
-	rx_err = ModbusReceiveFirstByte(&rx_byte); // started timer (1.5 + 1) byte
-	rx_array[rx_byte_num] = rx_byte;
-	
-	// цикл пока не получим MODBUS_RX_DONE. 
-	// Т.е. пока пауза м/у приемами байтов не будет больше 1,5 + 1 байт по времени
-
-	if( rx_err != ERROR_PACK_LEN){	
-		while(rx_err != MODBUS_RX_DONE){
-			rx_err = ModbusReceiveByte(&rx_byte);	// receive first byte = Address
-			rx_array[rx_byte_num] = rx_byte;
-			rx_byte_num++;
-			if(rx_byte_num == 0xFF) return ERROR_PACK_LEN;
-		}
-		
-		*rx_array_len = rx_byte_num;
-		return MODBUS_OK;
-		
-	}
-	else return ERROR_PACK_LEN;
-	
-	
-}
-
-
-
 
 
 
@@ -274,7 +161,7 @@ uint8_t CheckDataAddress(uint8_t op_code_in, uint8_t rx_request[]){
 
 
 /*
-	выход с номером 1 адресуется как 0.
+	дискретный выход с номером 1 адресуется как 0.
 */
 uint8_t CheckDataValue(uint8_t op_code_in, uint8_t rx_request[]){
 	uint16_t start_addr_rx = (rx_request[2] << 8) + rx_request[3];
@@ -334,7 +221,7 @@ uint8_t Exec_READ_COILS( uint16_t start_addr_in,
 							uint8_t answer_tx[],
 							uint8_t *answer_len){
 	uint8_t bytes_num = 1;
-	uint8_t Value_D0 = (((LED1_PORT -> ODR) & 0xE0) >> (LED1_PIN_NUM + start_addr_in));	// 0xE0 = pins 13 - 15 masked
+	uint8_t Value_D0 = (((LED1_PORT -> ODR) & 0xE000) >> (LED1_PIN_NUM + start_addr_in));	// 0xE0 = pins 13 - 15 masked
 	
 	answer_tx[0] = DEVICE_ADDR;
 	answer_tx[1] = READ_COILS;
@@ -345,6 +232,8 @@ uint8_t Exec_READ_COILS( uint16_t start_addr_in,
 	return MODBUS_OK;
 
 }
+
+
 
 
 uint8_t Exec_READ_DISCRETE_INPUTS( uint16_t start_addr_in, 
@@ -403,7 +292,7 @@ uint8_t Exec_WRITE_SINGLE_COIL( uint16_t start_addr_in,
 							uint8_t *answer_len){
 	uint8_t bytes_num = 1;
 	if(value_in == COIL_ON_CODE){
-		LED1_PORT -> ODR &= ~( 1 << ( LED1_PIN_NUM + start_addr_in ) );	// LED ON
+		LED1_PORT -> ODR |= ( 1 << ( LED1_PIN_NUM + start_addr_in ) );	// put 1 to LED_pin 
 		
 		answer_tx[0] = DEVICE_ADDR;
 		answer_tx[1] = WRITE_SINGLE_COIL;
@@ -419,7 +308,7 @@ uint8_t Exec_WRITE_SINGLE_COIL( uint16_t start_addr_in,
 	}
 	else{
 		if(value_in == COIL_OFF_CODE){
-			LED1_PORT -> ODR |= ( 1 << ( LED1_PIN_NUM + start_addr_in ) );	// LED OFF
+			LED1_PORT -> ODR &= ~( 1 << ( LED1_PIN_NUM + start_addr_in ) );	// put 0 to LED_pin 
 
 			answer_tx[0] = DEVICE_ADDR;
 			answer_tx[1] = WRITE_SINGLE_COIL;
@@ -543,15 +432,10 @@ uint8_t RequestParsingOperationExec(uint8_t rx_request[],
 	uint8_t answer_len_tmp;
 
 	if(ModbusRxState == MB_RX_DONE){
-
-		//LED2_ON();
-		//Delay_ms(50);
-		//LED2_OFF();
-
+		
 		// if Device Address match and packet length is not short
 		if( (RxArraySafe[0] == DEVICE_ADDR) && (RxByteNumSafe > 4) ){	
 			
-			// TODO: check this formula!!
 			crc_rx = (RxArraySafe[((RxByteNumSafe) - 1)] << 8) + (RxArraySafe[((RxByteNumSafe) - 2)] & 0x00FF);
 			// CRC16 compare
 			crc = CRC16_Calc(RxArraySafe, ((RxByteNumSafe) - 2));
@@ -567,31 +451,14 @@ uint8_t RequestParsingOperationExec(uint8_t rx_request[],
 
 						if(err == MODBUS_OK){	// operation execution
 							err = ExecOperation(op_code_rx, RxArraySafe, RxByteNumSafe, tx_answer_tmp, &answer_len_tmp);
-
-							//if(err == MODBUS_OK){
-								
-							//}
-							//else{
-							//	err = ERROR_EXECUTION;
-							//}
 						}
-						//else{
-						//	err = ERROR_DATA_VAL;
-						//}
 					}
-					//else{ 
-					//	err = ERROR_DATA_ADDR;
-					//}
 				}
-				//else{
-				//	err = ERROR_OP_CODE;
-				//}
 			}
 			else{ 
 				err = ERROR_CRC;
 			}
 		
-			
 			AnswerTransmit(err, tx_answer_tmp, &answer_len_tmp, op_code_rx);
 			return err;
 		}

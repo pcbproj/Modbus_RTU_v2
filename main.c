@@ -30,9 +30,7 @@ void SysTick_Handler(void){		// прервание от Systick таймера, 
 
 void TIM2_IRQHandler(void){
 	TIM2->SR &= ~(TIM_SR_UIF);	// clear UIF flag
-	
 	ModbusTimersIRQ();
-	
 	NVIC_ClearPendingIRQ(TIM2_IRQn);
 }
 
@@ -40,9 +38,7 @@ void TIM2_IRQHandler(void){
 
 void USART6_IRQHandler(void){
 	if((USART6->SR & USART_SR_RXNE) != 0){
-		
 		ModbusReception();
-		
 		NVIC_ClearPendingIRQ(USART6_IRQn);
 	}
 }
@@ -61,16 +57,14 @@ int main(void) {
 	uint16_t tim2_counter  = 0;
 
 	RCC_Init();
-	__enable_irq();	// enable global irq
+	__enable_irq();								// enable global interrupts
+	
 	SysTick_Config(SYSTICK_TIMER_CONST);		// systick period 1 us
 
 	GPIO_Init();
 	USART6_InitIRQ();
-
 	TIM2_InitOnePulseIRQ();
-	
 	ADC1_Init();
-	
 
 	LED1_OFF();
 	LED2_OFF();
