@@ -68,7 +68,8 @@ int main(void) {
 	USART6_InitIRQ();
 
 	TIM2_InitOnePulseIRQ();
-
+	
+	ADC1_Init();
 	
 
 	LED1_OFF();
@@ -80,22 +81,6 @@ int main(void) {
 	while(1){
 	
 		modbus_err = RequestParsingOperationExec( modbus_req_rx, modbus_rx_len, modbus_answer_tx, &modbus_answer_len );
-		//AnswerTransmit(modbus_err, modbus_answer_tx, &modbus_answer_len);
-		
-		
-		/*
-		//modbus_err = RequestReceive(modbus_req_rx, &modbus_rx_len);
-		//if( modbus_err == MODBUS_OK ){	// if received request
-			//modbus_err = RequestParsingOperationExec( modbus_req_rx, modbus_rx_len, modbus_answer_tx, &modbus_answer_len );
-			//AnswerTransmit(modbus_err, modbus_answer_tx, &modbus_answer_len);
-			LED2_ON();
-			//usart6_send(rs485_tx_array, sizeof(rs485_tx_array));	// send this byte back
-			Delay_ms(50);
-			LED2_OFF();
-		}
-		*/
-	//Delay_ms(50);
-	//LED1_TOGGLE();
 
 	}	// while(1)
 }	// main()

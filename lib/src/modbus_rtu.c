@@ -451,33 +451,20 @@ uint8_t Exec_WRITE_MULTI_COILS(uint8_t rx_request[],
 	uint16_t quantity_rx = ( rx_request[4] << 8 ) +  rx_request[5];
 	
 	uint8_t bytes_num = rx_request[6];
-	
-	/////!!   bytes_num = 1 allways
-	// TODO: CoilsPortValue wrong formula!!
 
-	uint8_t CoilsPortValue = ( ( rx_request[7]) ^ 0x0007) << (start_addr_in - 1); // (XOR ^) inversion couse LEDs turned by zero.
+	uint8_t CoilsPortValue = rx_request[7] << (start_addr_in); // (XOR ^) inversion couse LEDs turned by zero.
 
 	uint16_t turn_on_coils_num = 0;
 
 
 	LED1_PORT->ODR = ( CoilsPortValue << LED1_PIN_NUM );
 	
-	// calculate turn on coils number
-	for(uint8_t j = 0; j < 2 * quantity_rx; j++){
-		uint8_t data_byte = rx_request[7+j];
-		
-		for(uint8_t i = 0; i < 8; i++){
-			if (data_byte & 0x01) turn_on_coils_num++;
-			data_byte = data_byte >> 1;
-		}
-	}
-	
 	answer_tx[0] = DEVICE_ADDR;
 	answer_tx[1] = WRITE_MULTI_COILS;
 	answer_tx[2] = ( start_addr_in >> 8 );
 	answer_tx[3] = ( start_addr_in & 0x00FF );
-	answer_tx[4] = ( turn_on_coils_num >> 8 );
-	answer_tx[5] = ( turn_on_coils_num & 0x00FF );
+	answer_tx[4] = 0;
+	answer_tx[5] = quantity_rx;
 	
 	*answer_len = 6;
 
