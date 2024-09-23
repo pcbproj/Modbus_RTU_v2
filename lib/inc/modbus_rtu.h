@@ -17,9 +17,7 @@
 #define USART_BIT_TIME_US	1000000 / USART_BAUD_USED
 #define USART_BYTE_TIME_US	USART_BIT_TIME_US * 12	// BYTE send in 12 bits maximum
 
-#define DELAY_1_5_BYTE_US	( USART_BYTE_TIME_US * 1.5 + 1 )
 #define DELAY_2_5_BYTE_US	( USART_BYTE_TIME_US * 2.5 + 1 )
-#define DELAY_3_5_BYTE_US	( USART_BYTE_TIME_US * 3.5 + 1 )
 #define DELAY_4_5_BYTE_US	( USART_BYTE_TIME_US * 4.5 + 1 )
 
 //-------- internal modbus timers state codes -------------
