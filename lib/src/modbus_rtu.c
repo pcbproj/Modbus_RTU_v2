@@ -345,7 +345,6 @@ uint8_t Exec_WRITE_MULTI_COILS(uint8_t rx_request[],
 
 	uint16_t turn_on_coils_num = 0;
 
-
 	LED1_PORT->ODR = ( CoilsPortValue << LED1_PIN_NUM );
 	
 	answer_tx[0] = DEVICE_ADDR;
@@ -404,14 +403,15 @@ uint8_t ExecOperation(uint8_t op_code,
 	}
 	
 	*answer_len = array_answer_len;
-	for(uint8_t i=0; i < array_answer_len; i++) tx_answer[i] = answer_array[i];
+	for(uint8_t i=0; i < array_answer_len; i++) 
+		tx_answer[i] = answer_array[i]; // copy answer_array into tx_answer
 	
 	return err;
 }
 
 
 // Адрес данных верный?
-// Значение данных верное? В адекватном диапазоне?
+// Значение данных верное? В нашем диапазоне?
 // Выполнение требуемой операции
 // вычисление CRC16 для ответного пакета
 // формирование ответного пакета

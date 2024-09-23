@@ -13,9 +13,6 @@ void ADC1_Init(void){
 	ADC1->SMPR2 |= ADC_SMPR2_SMP5_0;			// выбираем время конвертирования 15 тактов для канал 5
 	ADC1->SQR1  &= ~(ADC_SQR1_L);				// conversion Sequence length = 1 
 	ADC1->SQR3  |= (5 << ADC_SQR3_SQ1_Pos);		// use first place in conversion sequence for channel 5 of ADC1
-	
-	//ADC1->CR1   |= ADC_CR1_EOCIE;				// Enable IRQ end of conversion
-	//NVIC_EnableIRQ(ADC_IRQn);					// Enable ADC IRQ
 
 	ADC1->CR2	|= ADC_CR2_CONT;				//	conversion continuous mode
 	ADC1->CR2	|= ADC_CR2_ADON;				// ADC enable

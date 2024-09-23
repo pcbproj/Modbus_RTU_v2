@@ -5,8 +5,13 @@
 
 
 void ADC1_Init(void);
-void ADC1_StartConversion(void);
 uint16_t ADC1_Read(void);
+
+//================================
+
+
+
+void ADC1_StartConversion(void);
 
 
 

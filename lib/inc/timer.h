@@ -5,15 +5,33 @@
 
 
 /******
-Инициализация таймера TIM2 бес включения прерываний
+Инициализация таймера TIM2 однократное срабатывание с прерыванием. 
 *****/
+void TIM2_InitOnePulseIRQ(void);
+
+
+/******
+Запуск таймера TIM2 
+*****/
+void TIM2_Start(uint16_t cycles_number);
+
+//============================================
+
+
+
+
+
+
+
+
+
+
 void TIM2_Init(void);
 
 void TIM2_InitIRQ(void);
 
 void TIM2_InitOnePulse(void);
 
-void TIM2_InitOnePulseIRQ(void);
 
 /******
 Запуск таймера TIM2 с прерыванием
@@ -22,18 +40,9 @@ void TIM2_StartIRQ(uint16_t cycles_number);
 
 
 /******
-Запуск таймера TIM2 без прерываний
-*****/
-void TIM2_Start(uint16_t cycles_number);
-
-
-
-/******
 Сброс таймера TIM2 без прерываний
 *****/
 void TIM2_Clear(void);
-
-
 
 
 /*******
