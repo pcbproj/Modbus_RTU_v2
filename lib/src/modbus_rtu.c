@@ -425,9 +425,6 @@ uint8_t RequestParsingOperationExec(uint8_t rx_request[],
 	uint16_t crc;
 	uint16_t crc_rx;
 	uint8_t op_code_rx;
-	uint16_t start_addr_rx;
-	uint16_t quantity_rx;
-	uint8_t bytes_number_rx;
 	uint8_t tx_answer_tmp[256];
 	uint8_t answer_len_tmp;
 
@@ -436,8 +433,6 @@ uint8_t RequestParsingOperationExec(uint8_t rx_request[],
 
 
 	if(ModbusRxState == MB_RX_DONE){
-		// тут добавить копирование глобального приемного массива в локальный RxArraySafe[] и длину массива тоже 
-		// сохранить, чтобы не переписались, при преме данных в прерывании.
 
 		RxByteNumSafe = RxByteNum;
 		for(uint8_t i = 0; i < RxByteNumSafe; i++){	// save received request into internal array
