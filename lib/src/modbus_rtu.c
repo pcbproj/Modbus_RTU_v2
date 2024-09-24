@@ -7,8 +7,8 @@ uint8_t ModbusRxState = MB_RX_IDLE;
 uint8_t ModbusRxArray[256];		// global array for modbus request reception in USART interrupt
 uint8_t RxByteNum;
 
-uint8_t RxArraySafe[256];		// global safe array for modbus request reception
-uint8_t RxByteNumSafe;
+//uint8_t RxArraySafe[256];		// global safe array for modbus request reception
+//uint8_t RxByteNumSafe;
 
 
 
@@ -22,10 +22,10 @@ void ModbusTimersIRQ(void){
 	else{
 		if(timer45_state = MB_TIM_DONE){
 			if(timer25_state == MB_TIM_STARTED){		// end of Modbus request reception
-				RxByteNumSafe = RxByteNum;
-				for(uint8_t i = 0; i < RxByteNumSafe; i++){	// save received request into internal array
-					RxArraySafe[i] = ModbusRxArray[i];
-				}
+				//RxByteNumSafe = RxByteNum;
+				//for(uint8_t i = 0; i < RxByteNumSafe; i++){	// save received request into internal array
+				//	RxArraySafe[i] = ModbusRxArray[i];
+				//}
 
 				ModbusTimerStart(DELAY_4_5_BYTE_US);	// start timer45 for 3.5 bytes silent on modbus bus
 				timer25_state = MB_TIM_DONE;
@@ -431,7 +431,18 @@ uint8_t RequestParsingOperationExec(uint8_t rx_request[],
 	uint8_t tx_answer_tmp[256];
 	uint8_t answer_len_tmp;
 
+	uint8_t RxArraySafe[256];		// safe array for modbus request reception
+	uint8_t RxByteNumSafe;
+
+
 	if(ModbusRxState == MB_RX_DONE){
+		// тут добавить копирование глобального приемного массива в локальный RxArraySafe[] и длину массива тоже 
+		// сохранить, чтобы не переписались, при преме данных в прерывании.
+
+		RxByteNumSafe = RxByteNum;
+		for(uint8_t i = 0; i < RxByteNumSafe; i++){	// save received request into internal array
+			RxArraySafe[i] = ModbusRxArray[i];
+		}
 		
 		// if Device Address match and packet length is not short
 		if( (RxArraySafe[0] == DEVICE_ADDR) && (RxByteNumSafe > 4) ){	

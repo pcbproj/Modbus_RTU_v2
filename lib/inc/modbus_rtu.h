@@ -154,6 +154,9 @@ uint8_t CheckDataAddress(uint8_t op_code, uint8_t rx_request[]);
 uint8_t CheckDataValue(uint8_t op_code_in, uint8_t rx_request[]);
 
 
+
+
+
 /*******
 Ф-ия проверяет правильность поля DATA и выполняет команду по запросу.
 	op_code			- код операции в принятом запросе
@@ -172,6 +175,9 @@ uint8_t ExecOperation(uint8_t op_code,
 						
 									
 
+
+
+
 /********
 Ф-ия выполняет операцию READ_COILS и возвращает код ошибки выполнения, либо MODBUS_OK, если все хорошо.
 ответный пакет формируется в выходной параметр массив answer_tx[], НО БЕЗ CRC16! 
@@ -180,6 +186,9 @@ uint8_t Exec_READ_COILS( uint16_t start_addr_in,
 							uint16_t quantity_in, 
 							uint8_t answer_tx[],
 							uint8_t *answer_len);
+
+
+
 
 
 /********
@@ -191,6 +200,9 @@ uint8_t Exec_READ_DISCRETE_INPUTS( uint16_t start_addr_in,
 							uint16_t quantity_in, 
 							uint8_t answer_tx[],
 							uint8_t *answer_len);
+
+
+
 
 
 
@@ -229,6 +241,9 @@ uint8_t Exec_WRITE_MULTI_COILS(uint8_t rx_request[],
 							uint8_t req_len, 
 							uint8_t answer_tx[],
 							uint8_t *answer_len);
+		
+		
+		
 										
 
 /********
