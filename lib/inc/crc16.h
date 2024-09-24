@@ -1,8 +1,6 @@
 #ifndef CRC16_H
 #define CRC16_H
 
-#include <stdlib.h>
-#include <stdio.h>
 #include "stm32f407xx.h"
 
 #define BYTE_LEN	8
