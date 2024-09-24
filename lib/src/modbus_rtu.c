@@ -52,30 +52,31 @@ void ModbusReception(void){
 		ModbusTimerStart(DELAY_3_5_BYTE_US);	// restart timer45
 	}
 	else{
-		if(timer35_state == MB_TIM_DONE){
+		if(timer35_state == MB_TIM_DONE){	// если паузу на шине выждали и пришел байт по USART6
 			
-			if((timer15_state == MB_TIM_IDLE) || (timer15_state == MB_TIM_STARTED)){		// receive data byte 
+			if((timer15_state == MB_TIM_IDLE) || (timer15_state == MB_TIM_STARTED)){	// if timer15 not started or not done
+																						//  receive data byte 
 				
 				if(RxByteNum < 255){
 					ModbusRxArray[ RxByteNum ] = RxByte;	// read USART6 DR into ModbusRxArray[]
 					RxByteNum++;
-					ModbusTimerStart(DELAY_1_5_BYTE_US);	//restart timer25
+					ModbusTimerStart(DELAY_1_5_BYTE_US);	//restart timer15
 					ModbusRxState = MB_RX_STARTED;
 				}
-				else{
+				else{ // игнорируем слишком длинные пакеты. 
 					timer15_state = MB_TIM_IDLE;
-					ModbusTimerStart(DELAY_3_5_BYTE_US);	// start timer45 for 3.5 bytes pause wait
+					ModbusTimerStart(DELAY_3_5_BYTE_US);	// start timer35 for bus pause wait
 					ModbusRxState = MB_RX_IDLE;
 				}
 			}
-			else{
+			else{	// reception not started. Wait for bus pause.
 				timer15_state = MB_TIM_IDLE;
-				ModbusTimerStart(DELAY_3_5_BYTE_US);	// start timer45 for 3.5 bytes pause wait
+				ModbusTimerStart(DELAY_3_5_BYTE_US);	// start timer35 for bus pause wait
 				ModbusRxState = MB_RX_IDLE;
 			}
 		}
 		else{
-			ModbusTimerStart(DELAY_3_5_BYTE_US);	// start timer45 for 3.5 bytes pause wait
+			ModbusTimerStart(DELAY_3_5_BYTE_US);	// start timer35 for bus pause wait
 		}
 	}
 }
@@ -97,17 +98,18 @@ void ModbusTimerStart(uint16_t timer_cycles){
 
 uint8_t GetOperationCode(uint8_t rx_request[], uint8_t *op_code_out){
 	uint8_t op_code_rx = rx_request[1];
+
+	*op_code_out = op_code_rx;
+
 	if(( op_code_rx == READ_COILS ) ||
 		( op_code_rx == READ_DISCRETE_INPUTS ) ||
 		( op_code_rx == READ_INPUT_REGISTERS ) ||
 		( op_code_rx == WRITE_SINGLE_COIL ) ||
 		( op_code_rx == WRITE_MULTI_COILS ) ){
 
-		*op_code_out = op_code_rx;
 		return MODBUS_OK;
 	} 
 	else {
-		*op_code_out = op_code_rx;
 		return ERROR_OP_CODE;
 		}
 }
