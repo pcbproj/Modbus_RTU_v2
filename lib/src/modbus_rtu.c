@@ -1,7 +1,7 @@
 #include "modbus_rtu.h"
 
-uint8_t timer25_state = MB_TIM_IDLE;
-uint8_t timer45_state = MB_TIM_IDLE;
+uint8_t timer15_state = MB_TIM_IDLE;
+uint8_t timer35_state = MB_TIM_IDLE;
 uint8_t ModbusRxState = MB_RX_IDLE;
 
 uint8_t ModbusRxArray[256];		// global array for modbus request reception in USART interrupt
@@ -14,31 +14,26 @@ uint8_t RxByteNum;
 
 
 void ModbusTimersIRQ(void){
-	if(timer45_state == MB_TIM_STARTED){			// wait for 3.5 byte silent on the modbus bud
-		timer45_state = MB_TIM_DONE;
-		timer25_state = MB_TIM_IDLE;
+	if(timer35_state == MB_TIM_STARTED){			// wait for 3.5 byte silent on the modbus bud
+		timer35_state = MB_TIM_DONE;
+		timer15_state = MB_TIM_IDLE;
 		RxByteNum = 0;		// clear reception byte number
 	}
 	else{
-		if(timer45_state = MB_TIM_DONE){
-			if(timer25_state == MB_TIM_STARTED){		// end of Modbus request reception
-				//RxByteNumSafe = RxByteNum;
-				//for(uint8_t i = 0; i < RxByteNumSafe; i++){	// save received request into internal array
-				//	RxArraySafe[i] = ModbusRxArray[i];
-				//}
-
-				ModbusTimerStart(DELAY_4_5_BYTE_US);	// start timer45 for 3.5 bytes silent on modbus bus
-				timer25_state = MB_TIM_DONE;
+		if(timer35_state = MB_TIM_DONE){
+			if(timer15_state == MB_TIM_STARTED){		// end of Modbus request reception
+				ModbusTimerStart(DELAY_3_5_BYTE_US);	// start timer45 for 3.5 bytes silent on modbus bus
+				timer15_state = MB_TIM_DONE;
 				ModbusRxState = MB_RX_DONE;
 			}
 			else{
-				timer45_state = MB_TIM_IDLE;
-				timer25_state = MB_TIM_IDLE;
+				timer35_state = MB_TIM_IDLE;
+				timer15_state = MB_TIM_IDLE;
 			}
 		}
 		else{
-			timer45_state = MB_TIM_IDLE;
-			timer25_state = MB_TIM_IDLE;
+			timer35_state = MB_TIM_IDLE;
+			timer15_state = MB_TIM_IDLE;
 		}
 	}
 }
@@ -53,34 +48,34 @@ void ModbusReception(void){
 	
 	uint8_t RxByte = USART6->DR;
 
-	if(timer45_state == MB_TIM_STARTED){
-		ModbusTimerStart(DELAY_4_5_BYTE_US);	// restart timer45
+	if(timer35_state == MB_TIM_STARTED){
+		ModbusTimerStart(DELAY_3_5_BYTE_US);	// restart timer45
 	}
 	else{
-		if(timer45_state == MB_TIM_DONE){
+		if(timer35_state == MB_TIM_DONE){
 			
-			if((timer25_state == MB_TIM_IDLE) || (timer25_state == MB_TIM_STARTED)){		// receive data byte 
+			if((timer15_state == MB_TIM_IDLE) || (timer15_state == MB_TIM_STARTED)){		// receive data byte 
 				
 				if(RxByteNum < 255){
 					ModbusRxArray[ RxByteNum ] = RxByte;	// read USART6 DR into ModbusRxArray[]
 					RxByteNum++;
-					ModbusTimerStart(DELAY_2_5_BYTE_US);	//restart timer25
+					ModbusTimerStart(DELAY_1_5_BYTE_US);	//restart timer25
 					ModbusRxState = MB_RX_STARTED;
 				}
 				else{
-					timer25_state = MB_TIM_IDLE;
-					ModbusTimerStart(DELAY_4_5_BYTE_US);	// start timer45 for 3.5 bytes pause wait
+					timer15_state = MB_TIM_IDLE;
+					ModbusTimerStart(DELAY_3_5_BYTE_US);	// start timer45 for 3.5 bytes pause wait
 					ModbusRxState = MB_RX_IDLE;
 				}
 			}
 			else{
-				timer25_state = MB_TIM_IDLE;
-				ModbusTimerStart(DELAY_4_5_BYTE_US);	// start timer45 for 3.5 bytes pause wait
+				timer15_state = MB_TIM_IDLE;
+				ModbusTimerStart(DELAY_3_5_BYTE_US);	// start timer45 for 3.5 bytes pause wait
 				ModbusRxState = MB_RX_IDLE;
 			}
 		}
 		else{
-			ModbusTimerStart(DELAY_4_5_BYTE_US);	// start timer45 for 3.5 bytes pause wait
+			ModbusTimerStart(DELAY_3_5_BYTE_US);	// start timer45 for 3.5 bytes pause wait
 		}
 	}
 }
@@ -90,9 +85,9 @@ void ModbusReception(void){
 
 void ModbusTimerStart(uint16_t timer_cycles){
 	TIM2_Start(timer_cycles);
-	if(timer_cycles == DELAY_2_5_BYTE_US) timer25_state = MB_TIM_STARTED;
+	if(timer_cycles == DELAY_1_5_BYTE_US) timer15_state = MB_TIM_STARTED;
 	else{
-		if(timer_cycles == DELAY_4_5_BYTE_US) timer45_state = MB_TIM_STARTED;
+		if(timer_cycles == DELAY_3_5_BYTE_US) timer35_state = MB_TIM_STARTED;
 	}
 }
 

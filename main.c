@@ -70,7 +70,7 @@ int main(void) {
 	LED2_OFF();
 	LED3_OFF();
 
-	ModbusTimerStart(DELAY_4_5_BYTE_US);
+	ModbusTimerStart(DELAY_3_5_BYTE_US);
 
 	while(1){
 	
