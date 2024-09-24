@@ -23,13 +23,19 @@ void ADC1_Init(void){
 
 
 
+
+uint16_t ADC1_Read(void){
+	//while( !( ADC1->SR & ADC_SR_EOC ) ){};	
+	return ADC1->DR;
+}
+
+
+//----------------------------
+
 void ADC1_StartConversion(void){
 	ADC1->CR2 |= ADC_CR2_SWSTART;	// ADC1 start conversion regular channels
 }
 
 
 
-uint16_t ADC1_Read(void){
-	//while( !( ADC1->SR & ADC_SR_EOC ) ){};	
-	return ADC1->DR;
-}
+

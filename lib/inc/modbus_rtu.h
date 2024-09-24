@@ -9,13 +9,9 @@
 #include "delay.h"
 #include "timer.h"
 
-#define MODBUS_USART		6
-
-
 //----------- Modbus timer constants -----------------
 #define USART_BAUD_USED		115200
-#define USART_BIT_TIME_US	1000000 / USART_BAUD_USED
-#define USART_BYTE_TIME_US	USART_BIT_TIME_US * 12	// BYTE send in 12 bits maximum
+#define USART_BYTE_TIME_US	(1000000 * 12) / USART_BAUD_USED 	// BYTE send in 12 bits maximum
 
 #define DELAY_2_5_BYTE_US	( USART_BYTE_TIME_US * 2.5 + 1 )
 #define DELAY_4_5_BYTE_US	( USART_BYTE_TIME_US * 4.5 + 1 )
