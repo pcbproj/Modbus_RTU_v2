@@ -8,14 +8,13 @@
 Добавление протокола Modbus в ранее написанную программу. 
 Команды передаются от ПК, исполнитель - МК.  
 МК засвечивает светодиоды по команде с ПК.
-отправляет состояние кнопок и отсчеты ADC по запросам.  
+отправляет состояние кнопок по запросу от МК.  
 
-модель данных MODBUS RTU у нас будет такая: 
+модель данных MODBUS RTU: 
 для каждого блока своя таблица. 
 
 LEDS = Coils
-Кнопки = Discretes Inputs
-ADC = Input Registers
+BUTTONS = Discretes Inputs
 
 */
 
@@ -64,7 +63,6 @@ int main(void) {
 	GPIO_Init();
 	USART6_InitIRQ();
 	TIM2_InitOnePulseIRQ();
-	ADC1_Init();
 
 	LED1_OFF();
 	LED2_OFF();
