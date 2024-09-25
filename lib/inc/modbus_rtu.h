@@ -3,7 +3,6 @@
 
 #include "stm32f407xx.h"
 #include "usart.h"
-#include "adc.h"
 #include "gpio.h"
 #include "crc16.h"
 #include "delay.h"
@@ -31,7 +30,6 @@
 //---- Modbus command codes ------------
 #define READ_COILS				0x01
 #define READ_DISCRETE_INPUTS	0x02
-#define READ_INPUT_REGISTERS	0x04
 #define WRITE_SINGLE_COIL		0x05	
 #define WRITE_MULTI_COILS		0x0F
 
@@ -58,10 +56,9 @@
 #define DEVICE_ADDR				0xAD
 
 //------Modbus internal addresses--------
-// LEDS, BTNS, ADC_data
+// LEDS, BTNS
 #define COILS_NUM				3	// LEDS
 #define DISCRETE_INPUTS_NUM		3	// BTNS
-#define INPUT_REGS_NUM			1	// ADC data
 
 
 #define COIL_ON_CODE			0xFF00
@@ -198,10 +195,10 @@ uint8_t Exec_READ_DISCRETE_INPUTS( uint16_t start_addr_in,
 либо возвращает MODBUS_OK, если все хорошо.
 ответный пакет формируется в выходной параметр массив answer_tx[], БЕЗ CRC16! 
 ********/
-uint8_t Exec_READ_INPUT_REGISTERS( uint16_t start_addr_in, 
-							uint16_t quantity_in, 
-							uint8_t answer_tx[],
-							uint8_t *answer_len);
+// uint8_t Exec_READ_INPUT_REGISTERS( uint16_t start_addr_in, 
+							// uint16_t quantity_in, 
+							// uint8_t answer_tx[],
+							// uint8_t *answer_len);
 
 
 

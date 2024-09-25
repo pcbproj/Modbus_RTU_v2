@@ -7,8 +7,6 @@ uint8_t ModbusRxState = MB_RX_IDLE;
 uint8_t ModbusRxArray[256];		// global array for modbus request reception in USART interrupt
 uint8_t RxByteNum;
 
-//uint8_t RxArraySafe[256];		// global safe array for modbus request reception
-//uint8_t RxByteNumSafe;
 
 
 
@@ -103,7 +101,6 @@ uint8_t GetOperationCode(uint8_t rx_request[], uint8_t *op_code_out){
 
 	if(( op_code_rx == READ_COILS ) ||
 		( op_code_rx == READ_DISCRETE_INPUTS ) ||
-		( op_code_rx == READ_INPUT_REGISTERS ) ||
 		( op_code_rx == WRITE_SINGLE_COIL ) ||
 		( op_code_rx == WRITE_MULTI_COILS ) ){
 
@@ -133,11 +130,6 @@ uint8_t CheckDataAddress(uint8_t op_code_in, uint8_t rx_request[]){
 		}
 		break;
 
-	case(READ_INPUT_REGISTERS):
-		if((start_addr_rx >= 0) && (start_addr_rx < INPUT_REGS_NUM)){
-			return MODBUS_OK;
-		}
-		break;
 
 	case(WRITE_SINGLE_COIL):
 		if((start_addr_rx >= 0) && (start_addr_rx < COILS_NUM)){
@@ -183,18 +175,10 @@ uint8_t CheckDataValue(uint8_t op_code_in, uint8_t rx_request[]){
 		else return ERROR_DATA_VAL;
 		break;
 
-	case(READ_INPUT_REGISTERS):
-		if((rx_data_range > 0) && (rx_data_range <= INPUT_REGS_NUM)){
-			return MODBUS_OK;
-		}
-		else return ERROR_DATA_VAL;
-		break;
 
 	case(WRITE_SINGLE_COIL):
-		if((wr_data_coil == COIL_OFF_CODE) || (wr_data_coil == COIL_ON_CODE)){
-			if(wr_addr_coil < COILS_NUM) {
+		if((wr_data_coil == COIL_OFF_CODE) || (wr_data_coil == COIL_ON_CODE) && (wr_addr_coil < COILS_NUM)){
 				return MODBUS_OK;
-			}
 		}
 		else return ERROR_DATA_VAL;
 		break;
@@ -250,28 +234,6 @@ uint8_t Exec_READ_DISCRETE_INPUTS( uint16_t start_addr_in,
 
 	return MODBUS_OK;
 
-}
-
-
-
-
-
-uint8_t Exec_READ_INPUT_REGISTERS( uint16_t start_addr_in, 
-							uint16_t quantity_in, 
-							uint8_t answer_tx[],
-							uint8_t *answer_len){
-	uint8_t bytes_num = 2;
-	uint16_t input_reg = ADC1_Read();
-	
-	answer_tx[0] = DEVICE_ADDR;
-	answer_tx[1] = READ_INPUT_REGISTERS;
-	answer_tx[2] = bytes_num;
-	answer_tx[3] = (input_reg >> 8);		// MSB of input_reg
-	answer_tx[4] = (input_reg & 0x00FF);	// LSB of input_reg
-
-	*answer_len = bytes_num + 3; // answer_len = all listed bytes, without CRC16 bytes
-	
-	return MODBUS_OK;
 }
 
 
@@ -385,9 +347,6 @@ uint8_t ExecOperation(uint8_t op_code,
 		err = Exec_READ_DISCRETE_INPUTS(start_addr_rx, quantity_rx, answer_array, &array_answer_len);
 		break;
 
-	case(READ_INPUT_REGISTERS):
-		err = Exec_READ_INPUT_REGISTERS(start_addr_rx, quantity_rx, answer_array, &array_answer_len);
-		break;
 
 	case(WRITE_SINGLE_COIL):
 		err = Exec_WRITE_SINGLE_COIL(start_addr_rx, quantity_rx, answer_array, &array_answer_len);
